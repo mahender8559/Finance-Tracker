@@ -32,8 +32,41 @@ export default function Dashboard() {
   useEffect(() => { supabase.auth.getSession().then(({ data }) => { setSession(data.session); setIsInitializing(false); }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession)); return () => subscription.unsubscribe(); }, []);
   const fetchSettings = useCallback(async () => { if (!session) return; const { data } = await supabase.from('user_settings').select('*').eq('user_id', session.user.id).single(); if (data) { setBankName(data.bank_name); setShowBankBreakdown(data.show_bank_breakdown); setCcBillingDay(data.cc_billing_day || 15); setCcDueDay(data.cc_due_day || 5); } else { await supabase.from('user_settings').insert([{ user_id: session.user.id, bank_name: 'IDFC Account Breakdown', show_bank_breakdown: false, cc_billing_day: 15, cc_due_day: 5 }]); setBankName('IDFC Account Breakdown'); } }, [session]);
   const fetchData = useCallback(async (month: string) => { if (!session) return; setDataLoading(true); setLedgerData([]); const [{ data: monthly }, { data: future }] = await Promise.all([supabase.from('ledger').select('*').eq('user_id', session.user.id).eq('month', month).neq('type', 'Future Purchases'), supabase.from('ledger').select('*').eq('user_id', session.user.id).eq('type', 'Future Purchases')]); const monthEntries = (monthly ?? []) as LedgerEntry[]; const existingSummaryCategories = new Set(monthEntries.filter((entry) => entry.type === 'Summary').map((entry) => entry.category)); const missingSummaryEntries = ['Investments', 'Savings'].filter((category) => !existingSummaryCategories.has(category)).map((category) => ({ month, category, amount: 0, type: 'Summary', user_id: session.user.id })); const { data: createdSummaries } = missingSummaryEntries.length ? await supabase.from('ledger').insert(missingSummaryEntries).select() : { data: [] }; setLedgerData([...monthEntries, ...((createdSummaries ?? []) as LedgerEntry[]), ...((future ?? []) as LedgerEntry[])]); setDataLoading(false); }, [session]);
-  const fetchOverallStats = useCallback(async () => { if (!session) return; const { data } = await supabase.from('ledger').select('category, amount').eq('type', 'Summary').eq('user_id', session.user.id); if (data) setOverallStats({ investments: data.filter((item) => item.category === 'Investments').reduce((sum, item) => sum + Number(item.amount), 0), savings: data.filter((item) => item.category === 'Savings').reduce((sum, item) => sum + Number(item.amount), 0) }); }, [session]);
-  const fetchTransactions = useCallback(async (month: string) => { if (!session) return; const { data, error } = await supabase.from('transactions').select('amount, category:categories(name)').eq('user_id', session.user.id).eq('month', month).eq('transaction_type', 'Actual Expense'); if (error) { alert(error.message); return; } const normalized = (data ?? []) as DashboardTransactionRaw[]; setTransactionData(normalized.map((item) => ({ amount: item.amount, category: Array.isArray(item.category) ? item.category[0] ?? null : item.category ?? null }))); }, [session]);
+  const fetchOverallStats = useCallback(async () => {
+    if (!session) return;
+    const [{ data: summaryData }, { data: transactionData }] = await Promise.all([
+      supabase.from('ledger').select('category, amount').eq('type', 'Summary').eq('user_id', session.user.id),
+      supabase.from('transactions').select('amount, category:categories(name)').eq('user_id', session.user.id).eq('transaction_type', 'Actual Expense'),
+    ]);
+
+    const summaryInvestments = (summaryData ?? []).filter((item) => item.category === 'Investments').reduce((sum, item) => sum + Number(item.amount), 0);
+    const summarySavings = (summaryData ?? []).filter((item) => item.category === 'Savings').reduce((sum, item) => sum + Number(item.amount), 0);
+    const transactionTotals = (transactionData ?? []).reduce(
+      (acc, item) => {
+        const category = Array.isArray(item.category) ? item.category[0]?.name : item.category?.name;
+        if (category === 'Investments') acc.investments += Number(item.amount);
+        if (category === 'Savings') acc.savings += Number(item.amount);
+        return acc;
+      },
+      { investments: 0, savings: 0 },
+    );
+
+    setOverallStats({
+      investments: summaryInvestments + transactionTotals.investments,
+      savings: summarySavings + transactionTotals.savings,
+    });
+  }, [session]);
+  const fetchTransactions = useCallback(async (month: string) => {
+    if (!session) return;
+    const { data, error } = await supabase.from('transactions').select('amount, category:categories(name)').eq('user_id', session.user.id).eq('month', month).eq('transaction_type', 'Actual Expense');
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    const normalized = (data ?? []) as DashboardTransactionRaw[];
+    setTransactionData(normalized.map((item) => ({ amount: item.amount, category: Array.isArray(item.category) ? item.category[0] ?? null : item.category ?? null })));
+    void fetchOverallStats();
+  }, [session, fetchOverallStats]);
   useEffect(() => { if (session) { void fetchData(selectedMonth); void fetchOverallStats(); void fetchSettings(); void fetchTransactions(selectedMonth); } }, [selectedMonth, session, fetchData, fetchOverallStats, fetchSettings, fetchTransactions]);
   async function handleSave(id: LedgerEntry['id'] | 'new', category: string, amount: string, type: LedgerType, targetDate: string | null = null) { if (!category.trim() && !amount && id === 'new') return; const payload = { month: selectedMonth, category, amount: parseFloat(amount) || 0, type, ...(targetDate !== null ? { target_date: targetDate || null } : {}) }; if (id === 'new') { const { data, error } = await supabase.from('ledger').insert([{ ...payload, user_id: session?.user.id }]).select(); if (error) return alert(`SUPABASE ERROR: ${error.message}`); if (data?.[0]) setLedgerData((current) => [...current, data[0] as LedgerEntry]); } else { const { error } = await supabase.from('ledger').update(payload).eq('id', id); if (error) alert(`UPDATE ERROR: ${error.message}`); else setLedgerData((current) => current.map((item) => item.id === id ? { ...item, ...payload } : item)); } if (type === 'Summary') void fetchOverallStats(); }
   async function handleDelete(id: LedgerEntry['id'], type: LedgerType) { if (!confirm('Are you sure you want to delete this entry?')) return; const { error } = await supabase.from('ledger').delete().eq('id', id); if (error) alert(`Error deleting: ${error.message}`); else { setLedgerData((current) => current.filter((item) => item.id !== id)); if (type === 'Summary') void fetchOverallStats(); } }
