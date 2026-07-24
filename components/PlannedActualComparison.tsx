@@ -4,13 +4,13 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 import { CustomTooltip } from '@/components/CustomTooltip';
 import { useTheme } from '@/context/theme-context';
 
-export function PlannedActualComparison({ data }: { data: { category: string; planned: number; actual: number }[] }) {
+export function PlannedActualComparison({ data, className }: { data: { category: string; planned: number; actual: number }[]; className?: string }) {
   const { theme } = useTheme();
   const muted = theme === 'dark' ? '#94a3b8' : '#64748b';
   const grid = theme === 'dark' ? '#334155' : '#e2e8f0';
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-md dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+    <section className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-md dark:border-slate-700 dark:bg-slate-900 sm:p-6 ${className ?? ''}`}>
       <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">
         <span className="h-2 w-2 rounded-full bg-emerald-500" />Planned vs Actual
       </h2>
