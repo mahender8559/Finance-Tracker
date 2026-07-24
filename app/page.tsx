@@ -44,13 +44,52 @@ export default function Dashboard() {
   async function handleCcSettings() { const billing = prompt('Enter your Credit Card Billing Date (e.g., 15):', String(ccBillingDay)); const due = prompt('Enter your Credit Card Due Date (e.g., 5):', String(ccDueDay)); if (!billing || !due || Number.isNaN(Number(billing)) || Number.isNaN(Number(due)) || !session) return; const cc_billing_day = parseInt(billing); const cc_due_day = parseInt(due); setCcBillingDay(cc_billing_day); setCcDueDay(cc_due_day); await supabase.from('user_settings').update({ cc_billing_day, cc_due_day }).eq('user_id', session.user.id); }
   async function handleAuth(event: FormEvent) { event.preventDefault(); setAuthLoading(true); const { error } = isLogin ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({ email, password }); if (error) alert(`${isLogin ? 'Login' : 'Signup'} failed: ${error.message}`); else if (!isLogin) alert('Account created successfully! Logging you in...'); setAuthLoading(false); }
   async function handleSignOut() { await supabase.auth.signOut(); setLedgerData([]); setOverallStats({ investments: 0, savings: 0 }); setBankName('Loading Bank...'); setShowBankBreakdown(false); }
-  const incomeTotal = sumEntries(ledgerData, 'Income'), actualLedgerTotal = sumEntries(ledgerData, 'Actual Expense'), billedTotal = sumEntries(ledgerData, 'Billed Credit Card'), unbilledTotal = sumEntries(ledgerData, 'Unbilled Credit Card'); const actualTransactionTotal = transactionData.reduce((sum, transaction) => sum + Number(transaction.amount), 0); const actualTotal = actualLedgerTotal + actualTransactionTotal; const investment = ledgerData.find((item) => item.type === 'Summary' && item.category === 'Investments') ?? summaryFallback('Investments'); const savings = ledgerData.find((item) => item.type === 'Summary' && item.category === 'Savings') ?? summaryFallback('Savings'); const totalOutflow = actualTotal + Number(investment.amount) + Number(savings.amount); const pieData = [
-    ...ledgerData.filter((item) => item.type === 'Actual Expense' && Number(item.amount) > 0).map((item) => ({ name: item.category, value: Number(item.amount) })),
-    ...transactionData.filter((transaction) => Number(transaction.amount) > 0 && transaction.category).map((transaction) => ({ name: transaction.category?.name ?? 'Other', value: Number(transaction.amount) })),
-  ];
+  const incomeTotal = sumEntries(ledgerData, 'Income'), actualLedgerTotal = sumEntries(ledgerData, 'Actual Expense'), billedTotal = sumEntries(ledgerData, 'Billed Credit Card'), unbilledTotal = sumEntries(ledgerData, 'Unbilled Credit Card');
+  const transactionLedgerEntries = transactionData
+    .filter((transaction) => Number(transaction.amount) > 0)
+    .reduce<Record<string, LedgerEntry>>((acc, transaction, index) => {
+      const categoryName = transaction.category?.name ?? 'Other';
+      const amount = Number(transaction.amount);
+      if (!acc[categoryName]) {
+        acc[categoryName] = {
+          id: `tx-${categoryName}-${index}`,
+          month: selectedMonth,
+          category: categoryName,
+          amount,
+          type: 'Actual Expense',
+        };
+      } else {
+        acc[categoryName].amount = Number(acc[categoryName].amount) + amount;
+      }
+      return acc;
+    }, {});
+  const investment = ledgerData.find((item) => item.type === 'Summary' && item.category === 'Investments') ?? summaryFallback('Investments');
+  const savings = ledgerData.find((item) => item.type === 'Summary' && item.category === 'Savings') ?? summaryFallback('Savings');
+  const actualEntries = ledgerData.filter((item) => item.type === 'Actual Expense');
+  const actualTransactionEntries = Object.values(transactionLedgerEntries);
+  const actualEntriesCombinedByCategory = [...actualEntries, ...actualTransactionEntries].reduce<Record<string, LedgerEntry>>((acc, entry, index) => {
+    const categoryName = entry.category || 'Other';
+    const amount = Number(entry.amount);
+    if (!acc[categoryName]) {
+      acc[categoryName] = {
+        id: `actual-${categoryName}-${index}`,
+        month: selectedMonth,
+        category: categoryName,
+        amount,
+        type: 'Actual Expense',
+      };
+    } else {
+      acc[categoryName].amount = Number(acc[categoryName].amount) + amount;
+    }
+    return acc;
+  }, {});
+  const actualLedgerEntries = Object.values(actualEntriesCombinedByCategory);
+  const actualTransactionTotal = actualTransactionEntries.reduce((sum, entry) => sum + Number(entry.amount), 0);
+  const actualTotal = actualLedgerTotal + actualTransactionTotal;
+  const totalOutflow = actualTotal + Number(investment.amount) + Number(savings.amount);
+  const pieData = actualLedgerEntries.map((item) => ({ name: item.category, value: Number(item.amount) }));
   const draftChange = (type: LedgerType, field: 'category' | 'amount', value: string) => setNewInputs((current) => ({ ...current, [type]: { category: current[type]?.category ?? '', amount: current[type]?.amount ?? '', [field]: value } })); const card = (title: string, type: LedgerType, editableTitle = false, entries = ledgerData.filter((item) => item.type === type), totalEntries = entries) => <LedgerCard title={title} type={type} entries={entries} categories={categories} totalEntries={totalEntries} draft={newInputs[type]} editableTitle={editableTitle} onRename={handleRenameBank} onSave={handleSave} onDelete={handleDelete} onDraftChange={draftChange} onDraftSave={handleNewSave} onMoveToActual={moveToActual} />;
   if (isInitializing) return <main className="flex min-h-screen items-center justify-center bg-slate-50 font-semibold text-slate-600 dark:bg-slate-950 dark:text-slate-300">Loading…</main>;
   if (!session) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950"><div className="w-full max-w-md rounded-xl border-t-8 border-[#425b8f] bg-white p-7 shadow-lg dark:bg-slate-900"><h1 className="mb-6 text-center text-2xl font-black text-slate-800 dark:text-slate-100">{isLogin ? 'Welcome Back' : 'Create an Account'}</h1><form onSubmit={handleAuth} className="space-y-4">{[['email', 'Email address'], ['password', 'Password']].map(([type, label]) => <label key={type} className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}<input type={type} required value={type === 'email' ? email : password} onChange={(event) => type === 'email' ? setEmail(event.target.value) : setPassword(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white" /></label>)}<button disabled={authLoading} className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 py-3 font-bold text-white shadow-md transition hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50">{authLoading ? 'Processing…' : isLogin ? 'Login to Dashboard' : 'Sign Up'}</button></form><button onClick={() => setIsLogin((current) => !current)} className="mt-6 w-full text-sm font-semibold text-blue-600 hover:text-blue-500">{isLogin ? "Don't have an account? Sign up" : 'Already have an account? Login'}</button></div></main>;
-  const actualEntries = ledgerData.filter((item) => item.type === 'Actual Expense'); const actualLedgerEntries = [...actualEntries, investment, savings];
-  return <main className="min-h-screen bg-slate-50 p-3 dark:bg-slate-950 sm:p-5 lg:p-6"><div className="mx-auto max-w-7xl"><Header selectedMonth={selectedMonth} months={monthOptions} onMonthChange={setSelectedMonth} onRollover={handleRollover} onSignOut={handleSignOut} /><SummaryCards expenses={actualTotal} investments={investment} savings={savings} stats={overallStats} netFlow={incomeTotal - totalOutflow} /><div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-2 md:mb-8"><ExpensePie data={pieData} /><BudgetBar data={[{ name: 'Total Income', amount: incomeTotal, fill: '#10b981' }, { name: 'Total Outflow', amount: totalOutflow, fill: '#ef4444' }]} /></div>{dataLoading ? <div className="my-16 text-center text-lg font-bold text-indigo-500 animate-pulse">Syncing with ledger…</div> : <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-3"><div className="space-y-4 rounded-xl bg-blue-50/60 p-2 dark:bg-blue-950/20">{card('Income', 'Income')}{showBankBreakdown && card(bankName, 'IDFC Breakdown', true)}</div><div className="rounded-xl bg-indigo-50/60 p-2 dark:bg-indigo-950/20">{card('Planned Expenses', 'Planned Expense')}</div><div className="rounded-xl bg-rose-50/60 p-2 dark:bg-rose-950/20">{card('Actual Expenses', 'Actual Expense', false, actualLedgerEntries, actualEntries)}</div><div className="space-y-4 rounded-xl bg-slate-100/70 p-2 dark:bg-slate-900/60">{card('Future Purchases', 'Future Purchases')}<div className="flex items-center justify-between rounded-xl bg-slate-800 px-4 py-3 text-sm font-bold text-white shadow-lg"><button onClick={handleCcSettings} className="border-b border-dashed border-white/40 pb-0.5 hover:text-blue-300">💳 Total CC Debt ✎</button><span className="text-rose-300">₹{formatCurrency(billedTotal + unbilledTotal)}</span></div>{card(`Billed (Due ${ccDueDateString})`, 'Billed Credit Card')}{card('Unbilled Credit Card', 'Unbilled Credit Card')}</div></div>}</div></main>;
+  return <main className="min-h-screen bg-slate-50 p-3 dark:bg-slate-950 sm:p-5 lg:p-6"><div className="mx-auto max-w-7xl"><Header selectedMonth={selectedMonth} months={monthOptions} onMonthChange={setSelectedMonth} onRollover={handleRollover} onSignOut={handleSignOut} /><SummaryCards expenses={actualTotal} investments={investment} savings={savings} stats={overallStats} netFlow={incomeTotal - totalOutflow} /><div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-2 md:mb-8"><ExpensePie data={pieData} /><BudgetBar data={[{ name: 'Total Income', amount: incomeTotal, fill: '#10b981' }, { name: 'Total Outflow', amount: totalOutflow, fill: '#ef4444' }]} /></div>{dataLoading ? <div className="my-16 text-center text-lg font-bold text-indigo-500 animate-pulse">Syncing with ledger…</div> : <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-3"><div className="space-y-4 rounded-xl bg-blue-50/60 p-2 dark:bg-blue-950/20">{card('Income', 'Income')}{showBankBreakdown && card(bankName, 'IDFC Breakdown', true)}</div><div className="rounded-xl bg-indigo-50/60 p-2 dark:bg-indigo-950/20">{card('Planned Expenses', 'Planned Expense')}</div><div className="rounded-xl bg-rose-50/60 p-2 dark:bg-rose-950/20">{card('Actual Expenses', 'Actual Expense', false, actualLedgerEntries, actualLedgerEntries)}</div><div className="space-y-4 rounded-xl bg-slate-100/70 p-2 dark:bg-slate-900/60">{card('Future Purchases', 'Future Purchases')}<div className="flex items-center justify-between rounded-xl bg-slate-800 px-4 py-3 text-sm font-bold text-white shadow-lg"><button onClick={handleCcSettings} className="border-b border-dashed border-white/40 pb-0.5 hover:text-blue-300">💳 Total CC Debt ✎</button><span className="text-rose-300">₹{formatCurrency(billedTotal + unbilledTotal)}</span></div>{card(`Billed (Due ${ccDueDateString})`, 'Billed Credit Card')}{card('Unbilled Credit Card', 'Unbilled Credit Card')}</div></div>}</div></main>;
 }

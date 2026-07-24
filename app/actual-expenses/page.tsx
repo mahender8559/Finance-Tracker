@@ -37,6 +37,7 @@ export default function ActualExpensesPage() {
     const { data, error } = await supabase
       .from('transactions')
       .select('*, category:categories(*)')
+      .eq('user_id', session.user.id)
       .eq('month', month)
       .eq('transaction_type', 'Actual Expense')
       .order('date', { ascending: false });
