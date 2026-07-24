@@ -124,31 +124,33 @@ export function TransactionModal({ categories, transaction, onClose, onSave, onC
                 ))}
               </select>
             </label>
+          </div>
 
-            <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+          <div className="sm:col-span-2">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
               <button type="button" onClick={() => setShowCategoryForm((current) => !current)} className="mb-3 text-sm font-semibold text-indigo-600 hover:text-indigo-500">
                 {showCategoryForm ? 'Cancel new category' : '+ Create category'}
               </button>
 
               {showCategoryForm && (
-                <div className="grid w-full min-w-0 grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-2">
+                <div className="flex min-h-[48px] items-center gap-3">
                   <input
                     value={newCategory.icon}
                     maxLength={4}
                     onChange={(event) => setNewCategory({ ...newCategory, icon: event.target.value })}
-                    className="rounded-lg border border-slate-200 bg-white p-2 text-center dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="h-12 w-12 min-w-[48px] rounded-lg border border-slate-200 bg-white p-2 text-center text-lg dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                   <input
                     value={newCategory.name}
                     placeholder="Category name"
                     onChange={(event) => setNewCategory({ ...newCategory, name: event.target.value })}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="h-12 min-w-0 flex-[0_0_58%] rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:ring-2 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                   <button
                     type="button"
                     onClick={handleCreateCategory}
                     disabled={creatingCategory || !newCategory.name.trim()}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-50"
+                    className="h-12 flex-1 min-w-[120px] rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-50"
                   >
                     {creatingCategory ? 'Creating…' : 'Create category'}
                   </button>
