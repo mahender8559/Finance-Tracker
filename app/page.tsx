@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { createClient, type Session } from '@supabase/supabase-js';
 import { BudgetBar } from '@/components/BudgetBar';
 import { ExpensePie } from '@/components/ExpensePie';
@@ -12,7 +12,7 @@ import type { LedgerEntry, LedgerType, NewInputs, OverallStats } from '@/types/f
 import { formatCurrency, getOrdinal, sumEntries } from '@/utils/finance';
 
 type DashboardTransaction = {
-  amount: number;
+  amount: number | string;
   category?: { name: string } | null;
 };
 
@@ -38,7 +38,7 @@ export default function Dashboard() {
   async function handleRollover() { if (!confirm("Copy 'Income' and 'Planned Expenses' categories from the previous month? (Amounts will be set to ₹0)")) return; const prior = new Date(`${selectedMonth} 1`); prior.setMonth(prior.getMonth() - 1); const previousMonth = prior.toLocaleString('en-US', { month: 'long', year: 'numeric' }); const { data } = await supabase.from('ledger').select('category, type').eq('month', previousMonth).in('type', ['Income', 'Planned Expense']); if (!data?.length) return alert(`No Income or Planned Expenses found in ${previousMonth}.`); const categories = new Set(ledgerData.map((item) => item.category.toLowerCase())); const additions = data.filter((item) => !categories.has(item.category.toLowerCase())).map((item) => ({ month: selectedMonth, category: item.category, amount: 0, type: item.type, user_id: session?.user.id })); if (!additions.length) return alert('All categories from the previous month already exist in this month.'); const { data: inserted, error } = await supabase.from('ledger').insert(additions).select(); if (error) alert(`Error copying: ${error.message}`); else if (inserted) { setLedgerData((current) => [...current, ...(inserted as LedgerEntry[])]); alert(`Successfully copied ${inserted.length} categories!`); } }
   async function handleRenameBank() { const name = prompt('Enter your bank name:', bankName); if (!name?.trim() || !session) return; setBankName(name); const { error } = await supabase.from('user_settings').update({ bank_name: name }).eq('user_id', session.user.id); if (error) await supabase.from('user_settings').upsert([{ user_id: session.user.id, bank_name: name }]); }
   async function handleCcSettings() { const billing = prompt('Enter your Credit Card Billing Date (e.g., 15):', String(ccBillingDay)); const due = prompt('Enter your Credit Card Due Date (e.g., 5):', String(ccDueDay)); if (!billing || !due || Number.isNaN(Number(billing)) || Number.isNaN(Number(due)) || !session) return; const cc_billing_day = parseInt(billing); const cc_due_day = parseInt(due); setCcBillingDay(cc_billing_day); setCcDueDay(cc_due_day); await supabase.from('user_settings').update({ cc_billing_day, cc_due_day }).eq('user_id', session.user.id); }
-  async function handleAuth(event: React.FormEvent) { event.preventDefault(); setAuthLoading(true); const { error } = isLogin ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({ email, password }); if (error) alert(`${isLogin ? 'Login' : 'Signup'} failed: ${error.message}`); else if (!isLogin) alert('Account created successfully! Logging you in...'); setAuthLoading(false); }
+  async function handleAuth(event: FormEvent) { event.preventDefault(); setAuthLoading(true); const { error } = isLogin ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({ email, password }); if (error) alert(`${isLogin ? 'Login' : 'Signup'} failed: ${error.message}`); else if (!isLogin) alert('Account created successfully! Logging you in...'); setAuthLoading(false); }
   async function handleSignOut() { await supabase.auth.signOut(); setLedgerData([]); setOverallStats({ investments: 0, savings: 0 }); setBankName('Loading Bank...'); setShowBankBreakdown(false); }
   const incomeTotal = sumEntries(ledgerData, 'Income'), actualLedgerTotal = sumEntries(ledgerData, 'Actual Expense'), billedTotal = sumEntries(ledgerData, 'Billed Credit Card'), unbilledTotal = sumEntries(ledgerData, 'Unbilled Credit Card'); const actualTransactionTotal = transactionData.reduce((sum, transaction) => sum + Number(transaction.amount), 0); const actualTotal = actualLedgerTotal + actualTransactionTotal; const investment = ledgerData.find((item) => item.type === 'Summary' && item.category === 'Investments') ?? summaryFallback('Investments'); const savings = ledgerData.find((item) => item.type === 'Summary' && item.category === 'Savings') ?? summaryFallback('Savings'); const totalOutflow = actualTotal + Number(investment.amount) + Number(savings.amount); const pieData = [
     ...ledgerData.filter((item) => item.type === 'Actual Expense' && Number(item.amount) > 0).map((item) => ({ name: item.category, value: Number(item.amount) })),

@@ -11,6 +11,7 @@ import type { Category, Transaction, TransactionDraft } from '@/types/finance';
 import { formatCurrency } from '@/utils/finance';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string);
+const CATEGORY_COLORS = ['#6366f1', '#3b82f6', '#06b6d4', '#10b981', '#22c55e', '#eab308', '#f97316', '#ef4444', '#ec4899', '#8b5cf6'];
 
 export default function ActualExpensesPage() {
   const [session, setSession] = useState<Session | null>(null);
@@ -47,7 +48,7 @@ export default function ActualExpensesPage() {
   const handleCreateCategory = useCallback(async (categoryData: { name: string; icon: string }) => {
     if (!session) return null;
 
-    const nextColor = categoryColors.find((color) => !categories.some((category) => category.color === color)) ?? categoryColors[categories.length % categoryColors.length];
+    const nextColor = CATEGORY_COLORS.find((color) => !categories.some((category) => category.color === color)) ?? CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length];
     const { data, error } = await supabase
       .from('categories')
       .insert([
