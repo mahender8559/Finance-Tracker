@@ -105,14 +105,33 @@ export function TransactionModal({ categories, transaction, onClose, onSave, onC
                 className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:ring-2 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               />
             </label>
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Category
+              <select
+                required
+                value={draft.category_id}
+                onChange={(event) => setDraft({ ...draft, category_id: event.target.value })}
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:ring-2 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              >
+                <option value="">Select category</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.icon} {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
-              <button type="button" onClick={() => setShowCategoryForm((current) => !current)} className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
+              <button type="button" onClick={() => setShowCategoryForm((current) => !current)} className="mb-3 text-sm font-semibold text-indigo-600 hover:text-indigo-500">
                 {showCategoryForm ? 'Cancel new category' : '+ Create category'}
               </button>
 
               {showCategoryForm && (
-                <div className="mt-3 grid w-full min-w-0 grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-2">
+                <div className="grid w-full min-w-0 grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-2">
                   <input
                     value={newCategory.icon}
                     maxLength={4}
@@ -137,23 +156,6 @@ export function TransactionModal({ categories, transaction, onClose, onSave, onC
               )}
             </div>
           </div>
-
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            Category
-            <select
-              required
-              value={draft.category_id}
-              onChange={(event) => setDraft({ ...draft, category_id: event.target.value })}
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:ring-2 focus:ring-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-            >
-              <option value="">Select category</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.icon} {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
 
           <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             Description
