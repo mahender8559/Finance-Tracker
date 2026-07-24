@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface HeaderProps { selectedMonth: string; months: string[]; onMonthChange: (month: string) => void; onRollover: () => void; onSignOut: () => void; }
@@ -15,8 +16,8 @@ export function Header({ selectedMonth, months, onMonthChange, onRollover, onSig
           {months.map((month) => <option key={month} value={month} className="bg-slate-900">{month}</option>)}
         </select>
         <ThemeToggle />
-        <a href="/actual-expenses" className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20">Expenses</a>
-        <a href="/settings" className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20">Settings</a>
+        <Link href="/actual-expenses" className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20">Expenses</Link>
+        <Link href="/settings" className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20">Settings</Link>
         <button onClick={onSignOut} className="px-2 py-2 text-sm text-indigo-200 underline-offset-4 transition hover:text-white hover:underline">Sign out</button>
       </div>
     </div>
