@@ -30,8 +30,6 @@ export default function ActualExpensesPage() {
     });
   }, []);
 
-  const categoryColors = ['#6366f1', '#3b82f6', '#06b6d4', '#10b981', '#22c55e', '#eab308', '#f97316', '#ef4444', '#ec4899', '#8b5cf6'];
-
   const refreshTransactions = useCallback(async () => {
     if (!session) return;
     setLoading(true);
