@@ -41,7 +41,8 @@ export default function Dashboard() {
 
     const summaryInvestments = (summaryData ?? []).filter((item) => item.category === 'Investments').reduce((sum, item) => sum + Number(item.amount), 0);
     const summarySavings = (summaryData ?? []).filter((item) => item.category === 'Savings').reduce((sum, item) => sum + Number(item.amount), 0);
-    const transactionTotals = (transactionData ?? []).reduce(
+    const normalizedTransactions = (transactionData ?? []) as DashboardTransactionRaw[];
+    const transactionTotals = normalizedTransactions.reduce(
       (acc, item) => {
         const category = Array.isArray(item.category) ? item.category[0]?.name : item.category?.name;
         if (category === 'Investments') acc.investments += Number(item.amount);
