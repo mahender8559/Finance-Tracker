@@ -4,7 +4,7 @@ import { createClient, type Session } from '@supabase/supabase-js';
 import { ExpensePie } from '@/components/ExpensePie';
 import { Header } from '@/components/Header';
 import { LedgerCard } from '@/components/LedgerCard';
-import { PlannedActualComparison } from '@/components/PlannedActualComparisonts/PlannedActualComparison';
+import { PlannedActualComparison } from '@/components/PlannedActualComparison';
 import { SummaryCards } from '@/components/SummaryCards';
 import { useCategories } from '@/hooks/use-categories';
 import { useMonthOptions } from '@/hooks/use-month-options';
