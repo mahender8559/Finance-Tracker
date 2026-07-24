@@ -122,16 +122,16 @@ export function TransactionModal({ categories, transaction, onClose, onSave, onC
                 ))}
               </select>
 
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <button type="button" onClick={() => setShowCategoryForm((current) => !current)} className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
                   {showCategoryForm ? 'Cancel new category' : '+ Create category'}
                 </button>
-                <span className="text-xs text-slate-500">You can add a category without leaving this form.</span>
+                <span className="min-w-0 text-xs text-slate-500">You can add a category without leaving this form.</span>
               </div>
 
               {showCategoryForm && (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
-                  <div className="grid grid-cols-[72px_1fr] gap-2">
+                <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                  <div className="grid w-full min-w-0 grid-cols-[48px_minmax(0,1fr)] gap-2">
                     <input
                       value={newCategory.icon}
                       maxLength={4}
@@ -142,7 +142,7 @@ export function TransactionModal({ categories, transaction, onClose, onSave, onC
                       value={newCategory.name}
                       placeholder="Category name"
                       onChange={(event) => setNewCategory({ ...newCategory, name: event.target.value })}
-                      className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     />
                   </div>
                   <button
